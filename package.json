@@ -1,0 +1,8 @@
+{
+  "name": "szpn-auto-send-api",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "ethers": "^6.11.0"
+  }
+}
