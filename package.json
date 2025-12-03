@@ -1,8 +1,13 @@
 {
   "name": "szpn-auto-send-api",
   "version": "1.0.0",
-  "type": "module",
+  "scripts": {
+    "start": "next start",
+    "dev": "next dev",
+    "build": "next build"
+  },
   "dependencies": {
-    "ethers": "^5.7.2"
+    "next": "13.5.6",
+    "ethers": "5.7.2"
   }
 }
