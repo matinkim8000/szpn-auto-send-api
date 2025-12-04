@@ -1,6 +1,13 @@
-// api/transfer.js
-
 import { ethers } from "ethers";
+
+// ====== SZPN Token Contract ======
+const SZPN_ADDRESS = "0x83e137cf30dc28e5e6d28a63e841aa3bc6af1a99";
+
+// ====== 기본 ERC20 ABI (transfer, decimals만 필요) ======
+const ERC20_ABI = [
+  "function transfer(address to, uint256 value) external returns (bool)",
+  "function decimals() view returns (uint8)"
+];
 
 export default async function handler(req, res) {
   try {
@@ -14,7 +21,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing parameters" });
     }
 
-    // 환경변수 예: PK_0x21ed39...
     const envKey = `PK_${senderId}`;
     const privateKey = process.env[envKey];
 
@@ -32,17 +38,20 @@ export default async function handler(req, res) {
     const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
     const wallet = new ethers.Wallet(privateKey, provider);
 
-    const valueWei = ethers.utils.parseEther(String(amount));
+    // ====== ERC20 Contract 생성 ======
+    const token = new ethers.Contract(SZPN_ADDRESS, ERC20_ABI, wallet);
 
-    const tx = await wallet.sendTransaction({
-      to,
-      value: valueWei
-    });
+    // ====== decimals 확인 ======
+    const decimals = await token.decimals();
+    const amountWei = ethers.utils.parseUnits(String(amount), decimals);
 
+    // ====== SZPN 전송 ======
+    const tx = await token.transfer(to, amountWei);
     const receipt = await tx.wait();
 
     return res.status(200).json({
       status: "OK",
+      token: "SZPN",
       from: wallet.address,
       to,
       amount,
@@ -51,11 +60,10 @@ export default async function handler(req, res) {
     });
 
   } catch (err) {
-    console.error("Transfer Error:", err);
+    console.error("SZPN Transfer Error:", err);
     return res.status(500).json({
       status: "ERROR",
       error: String(err)
     });
   }
 }
-
