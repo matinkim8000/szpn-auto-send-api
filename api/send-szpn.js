@@ -13,12 +13,9 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing 'to' or 'amount'" });
     }
 
-    // ⭐ walletIndex 기본값 = 1
     const index = walletIndex || 1;
 
-    // ⭐ PRIVATE_KEY0001, PRIVATE_KEY0002 ... 형태로 키 생성
     const keyName = `PRIVATE_KEY${String(index).padStart(4, "0")}`;
-
     const PRIVATE_KEY = process.env[keyName];
 
     if (!PRIVATE_KEY) {
