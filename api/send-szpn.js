@@ -4,31 +4,37 @@ export default async function handler(req, res) {
   try {
     const { senderId, to, amount } = req.body;
 
-    const privateKey = process.env[`PK_${senderId.toLowerCase()}`];
+    if (!senderId || !to || !amount) {
+      return res.status(400).json({ status: "error", message: "필드 누락: senderId, to, amount 필요" });
+    }
+
+    // 주소를 소문자로 정리해서 환경변수 키 매칭
+    const pkKey = `PK_${senderId.toLowerCase()}`;
+    const privateKey = process.env[pkKey];
+
     if (!privateKey) {
       return res.status(400).json({
         status: "error",
-        message: "해당 senderId에 대한 PRIVATE_KEY가 설정되어 있지 않습니다."
+        message: `환경변수에서 ${pkKey} 를 찾을 수 없습니다.`
       });
     }
 
     const provider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL);
     const wallet = new ethers.Wallet(privateKey, provider);
 
-    const token = process.env.TOKEN_ADDRESS;
-    const tokenAbi = [
-      "function transfer(address to, uint256 amount) public returns (bool)"
-    ];
-    const tokenContract = new ethers.Contract(token, tokenAbi, wallet);
+    const tokenAddress = process.env.TOKEN_ADDRESS;
+    const tokenAbi = ["function transfer(address to, uint256 amount) public returns (bool)"];
+    const token = new ethers.Contract(tokenAddress, tokenAbi, wallet);
 
-    // ⭐ 가장 중요 — pending 기준 nonce 확인
+    // ⭐ 가장 중요: pending 포함 nonce 조회
     const nonce = await provider.getTransactionCount(wallet.address, "pending");
 
+    // 18 decimal 변환
     const amountWei = ethers.utils.parseUnits(amount.toString(), 18);
 
-    // ⭐ gasLimit을 고정 -> gas estimation 스킵됨
-    const tx = await tokenContract.transfer(to, amountWei, {
-      nonce: nonce,
+    // ⭐ gasLimit 고정 (가스 추정 실패 방지)
+    const tx = await token.transfer(to, amountWei, {
+      nonce,
       gasLimit: 150000
     });
 
@@ -41,10 +47,11 @@ export default async function handler(req, res) {
       to,
       amount
     });
-  } catch (e) {
+
+  } catch (error) {
     return res.status(500).json({
       status: "error",
-      message: e.toString()
+      message: error.toString()
     });
   }
 }
